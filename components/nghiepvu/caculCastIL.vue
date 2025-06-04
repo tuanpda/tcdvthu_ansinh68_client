@@ -135,7 +135,7 @@
               </td>
               <td style="text-align: center">
                 <input
-                  @blur="checkAlertCccd(item.cccd)"
+                  @blur="findNguoihuong_cccd(item.cccd, index)"
                   v-model="item.cccd"
                   class="input is-small"
                   type="number"
@@ -912,7 +912,12 @@
                     </div>
                     <div style="flex-grow: 1">
                       <input
-                        @blur="checkAlertCccd(datanhaphosomodal.cccd)"
+                        @blur="
+                          findNguoihuong_cccd(
+                            datanhaphosomodal.cccd,
+                            addedIndex
+                          )
+                        "
                         v-model="datanhaphosomodal.cccd"
                         class="input is-small"
                         type="number"
@@ -1942,7 +1947,7 @@ export default {
 
         try {
           const res = await this.$axios.get(
-            `/api/nguoihuong/find-nguoihuong?MaSoBhxh=${masobhxh}`
+            `/api/nguoihuong/find-nguoihuong-masobhxh-theodstg?soBhxh=${masobhxh}`
           );
           this.isLoading = true;
           // console.log(res.data);
@@ -1966,46 +1971,160 @@ export default {
             });
             const data = res.data[0];
             try {
-              this.items[index].hoten = data.HoTen;
-              this.items[index].ngaysinh = data.NgaySinh;
-              this.items[index].gioitinh = data.GioiTinh;
-              this.items[index].cccd = data.Cmnd;
-              this.items[index].dienthoai = data.DienThoai;
-              this.items[index].matinh = data.HoKhauTinhId;
+              this.items[index].hoten = data.hoTen;
+              this.items[index].ngaysinh = data.ngaySinh;
+              this.items[index].gioitinh = data.gioiTinh;
+              this.items[index].cccd = data.soCmnd;
+              this.items[index].dienthoai = data.soDienThoai;
+              this.items[index].matinh = data.maTinh;
               // đi tìm tên tỉnh
               const res_tinh = await this.$axios.get(
-                `/api/nguoihuong/find-tentinh?matinh=${data.HoKhauTinhId}`
+                `/api/nguoihuong/find-tentinh?matinh=${data.maTinh}`
               );
               if (res_tinh.data.length > 0) {
                 this.items[index].tentinh = res_tinh.data[0].tentinh;
               }
-              this.items[index].maquanhuyen = data.HoKhauHuyenId;
+              this.items[index].maquanhuyen = data.maHuyenLh;
               // đi tìm tên quận huyện
               const res_huyen = await this.$axios.get(
-                `/api/nguoihuong/find-tenhuyen?matinh=${data.HoKhauTinhId}&maquanhuyen=${data.HoKhauHuyenId}`
+                `/api/nguoihuong/find-tenhuyen?matinh=${data.maTinh}&maquanhuyen=${data.maHuyenLh}`
               );
               if (res_huyen.data.length > 0) {
                 this.items[index].tenquanhuyen = res_huyen.data[0].tenquanhuyen;
               }
-              this.items[index].maxaphuong = data.HoKhauXaId;
+              this.items[index].maxaphuong = data.maXaLh;
               // đi tìm tên xã
               const res_xa = await this.$axios.get(
-                `/api/nguoihuong/find-tenxa?matinh=${data.HoKhauTinhId}&maquanhuyen=${data.HoKhauHuyenId}&maxaphuong=${data.HoKhauXaId}`
+                `/api/nguoihuong/find-tenxa?matinh=${data.maTinh}&maquanhuyen=${data.maHuyenLh}&maxaphuong=${data.maXaLh}`
               );
               if (res_xa.data.length > 0) {
                 this.items[index].tenxaphuong = res_xa.data[0].tenxaphuong;
               }
-              this.items[index].tothon = data.DiaChiSinhSong;
-              this.items[index].benhvientinh = data.TinhKhamChuaBenhId;
-              this.items[index].mabenhvien = data.NoiKhamChuaBenh;
+              this.items[index].tothon = data.diaChiLh;
+              this.items[index].benhvientinh = data.maTinh;
+              // this.items[index].mabenhvien = data.NoiKhamChuaBenh;
               // đi tìm tên bệnh viện kcb
-              const maBv = `${this.matinh}${data.NoiKhamChuaBenh}`;
-              const res_bv = await this.$axios.get(
-                `/api/nguoihuong/find-benhvien?mabenhvien=${maBv}`
+              // const maBv = `${this.matinh}${data.NoiKhamChuaBenh}`;
+              // const res_bv = await this.$axios.get(
+              //   `/api/nguoihuong/find-benhvien?mabenhvien=${maBv}`
+              // );
+              // if (res_bv.data.length > 0) {
+              //   this.items[index].tenbenhvien = res_bv.data[0].tenbenhvien;
+              // }
+            } catch (error) {
+              console.log(error.message);
+            }
+          } else {
+            this.isLoading = false;
+            const Toast = Swal.mixin({
+              toast: true,
+              position: "top-end",
+              showConfirmButton: false,
+              timer: 3000,
+              timerProgressBar: true,
+              didOpen: (toast) => {
+                toast.addEventListener("mouseenter", Swal.stopTimer);
+                toast.addEventListener("mouseleave", Swal.resumeTimer);
+              },
+            });
+            Toast.fire({
+              icon: "error",
+              title: "Không tìm thấy dữ liệu trong kho người hưởng",
+            });
+            return;
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    },
+
+    async findNguoihuong_cccd(cccd, index) {
+      if (cccd !== "") {
+        const isDuplicate = this.items.some(
+          (item, idx) =>
+            idx !== index &&
+            (item.cccd === cccd || item.cccd === this.items[index].cccd)
+        );
+
+        if (isDuplicate) {
+          Swal.fire({
+            text: `Mã số ${cccd} vừa được đăng ký trong loại hình này xong, vui lòng kiểm tra lại!`,
+            icon: "error",
+          });
+
+          // Xoá mã số BHXH vừa nhập
+          this.items[index].cccd = "";
+          return;
+        }
+
+        try {
+          const res = await this.$axios.get(
+            `/api/nguoihuong/find-nguoihuong-cccd-theodstg?soCmnd=${cccd}`
+          );
+          this.isLoading = true;
+          // console.log(res.data);
+          if (res.data.length > 0) {
+            this.isLoading = false;
+            const Toast = Swal.mixin({
+              toast: true,
+              position: "top-end",
+              showConfirmButton: false,
+              timer: 3000,
+              timerProgressBar: true,
+              didOpen: (toast) => {
+                toast.addEventListener("mouseenter", Swal.stopTimer);
+                toast.addEventListener("mouseleave", Swal.resumeTimer);
+              },
+            });
+            Toast.fire({
+              icon: "success",
+              title:
+                "Dữ liệu chỉ mang tính chất tham khảo. Xem và sửa nếu cần thiết !",
+            });
+            const data = res.data[0];
+            try {
+              this.items[index].masobhxh = data.soBhxh;
+              this.items[index].hoten = data.hoTen;
+              this.items[index].ngaysinh = data.ngaySinh;
+              this.items[index].gioitinh = data.gioiTinh;
+              this.items[index].cccd = data.soCmnd;
+              this.items[index].dienthoai = data.soDienThoai;
+              this.items[index].matinh = data.maTinh;
+              // đi tìm tên tỉnh
+              const res_tinh = await this.$axios.get(
+                `/api/nguoihuong/find-tentinh?matinh=${data.maTinh}`
               );
-              if (res_bv.data.length > 0) {
-                this.items[index].tenbenhvien = res_bv.data[0].tenbenhvien;
+              if (res_tinh.data.length > 0) {
+                this.items[index].tentinh = res_tinh.data[0].tentinh;
               }
+              this.items[index].maquanhuyen = data.maHuyenLh;
+              // đi tìm tên quận huyện
+              const res_huyen = await this.$axios.get(
+                `/api/nguoihuong/find-tenhuyen?matinh=${data.maTinh}&maquanhuyen=${data.maHuyenLh}`
+              );
+              if (res_huyen.data.length > 0) {
+                this.items[index].tenquanhuyen = res_huyen.data[0].tenquanhuyen;
+              }
+              this.items[index].maxaphuong = data.maXaLh;
+              // đi tìm tên xã
+              const res_xa = await this.$axios.get(
+                `/api/nguoihuong/find-tenxa?matinh=${data.maTinh}&maquanhuyen=${data.maHuyenLh}&maxaphuong=${data.maXaLh}`
+              );
+              if (res_xa.data.length > 0) {
+                this.items[index].tenxaphuong = res_xa.data[0].tenxaphuong;
+              }
+              this.items[index].tothon = data.diaChiLh;
+              this.items[index].benhvientinh = data.maTinh;
+              // this.items[index].mabenhvien = data.NoiKhamChuaBenh;
+              // đi tìm tên bệnh viện kcb
+              // const maBv = `${this.matinh}${data.NoiKhamChuaBenh}`;
+              // const res_bv = await this.$axios.get(
+              //   `/api/nguoihuong/find-benhvien?mabenhvien=${maBv}`
+              // );
+              // if (res_bv.data.length > 0) {
+              //   this.items[index].tenbenhvien = res_bv.data[0].tenbenhvien;
+              // }
             } catch (error) {
               console.log(error.message);
             }
