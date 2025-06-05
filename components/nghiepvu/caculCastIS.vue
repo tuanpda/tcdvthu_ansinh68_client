@@ -2672,6 +2672,9 @@ export default {
           (castMucdong - hotroTW - 0 - castDiaphuonghtKhac) * thangNgoai2025;
         // tức là đoạn này cho phép là this.tylediaphuonghotroIs = 0 (không còn được hỗ trợ)
         // khi nào cần điều chỉnh thì chỉnh
+        // console.log(this.tylediaphuonghotroIs);
+        // console.log(tienTrong2025);
+        // console.log(tienNgoai2025);
 
         tienCanNap = tienTrong2025 + tienNgoai2025;
       }

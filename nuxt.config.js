@@ -59,7 +59,7 @@ export default {
     // baseURL: "http://192.168.160.7:2612", // máy chủ nhân hoà
     baseURL: "http://14.224.129.177:4209", // máy chủ tuanpda ansinh68
     // baseURL: "http://27.73.37.94:1552", // máy chủ phủ diễn
-    // baseURL: "http://localhost:4213",
+    // baseURL: "http://localhost:4209",
     credentials: true,
   },
 

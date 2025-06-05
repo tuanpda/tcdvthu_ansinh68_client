@@ -42,7 +42,7 @@
               <td style="text-align: center">Phương án</td>
               <td style="text-align: center">Người thứ ?</td>
               <td style="text-align: center">Lương cơ sở</td>
-              <td style="text-align: center">Từ ngày</td>
+              <td style="text-align: center">Hạn thẻ cũ</td>
               <td style="text-align: center">Số tháng</td>
               <td style="text-align: center">Số tiền phải đóng</td>
               <td style="text-align: center">Tỉnh / Thành phố</td>
@@ -193,14 +193,18 @@
                 />
               </td>
 
-              <td style="text-align: center">
+              <!-- <td style="text-align: center">
                 <input
                   v-model="item.tungay"
                   class="input is-small"
                   type="date"
                   ref="tungayInput"
                 />
+              </td> -->
+              <td style="text-align: center">
+                <input v-model="hanthecu" type="text" class="input is-small" />
               </td>
+
               <td style="text-align: center">
                 <div class="select is-fullwidth is-small">
                   <select
@@ -962,20 +966,15 @@
                 </div>
                 <div class="column">
                   <div style="margin-bottom: 5px">
-                    <label class="labelFix">Từ ngày</label>
+                    <label class="labelFix">Hạn thẻ cũ</label>
                   </div>
-                  <div>
-                    <!-- <input
-                      v-model="datanhaphosomodal.tungay"
+                  <td style="text-align: center">
+                    <input
+                      v-model="hanthecu"
+                      type="text"
                       class="input is-small"
-                      type="date"
-                      ref="tungayInput"
-                    /> -->
-                    <date-picker
-                      v-model="datanhaphosomodal.tungay"
-                      valueType="format"
-                    ></date-picker>
-                  </div>
+                    />
+                  </td>
                 </div>
               </div>
 
@@ -1516,6 +1515,8 @@ export default {
       datanhaphosomodal: {},
       isRoleSent: false,
       benhvienInfo: null,
+
+      hanthecu: "",
     };
   },
 
@@ -1623,6 +1624,9 @@ export default {
           this.isLoading = true;
           // console.log(res.data);
           if (res.data.length > 0) {
+            const resThe = await this.$axios.get(
+              `/api/nguoihuong/find-nguoihuong-masobhxh-theodstg-timhanthe?soSoBhxh=${masobhxh}`
+            );
             this.isLoading = false;
             const Toast = Swal.mixin({
               toast: true,
@@ -1641,12 +1645,64 @@ export default {
                 "Dữ liệu chỉ mang tính chất tham khảo. Xem và sửa nếu cần thiết !",
             });
             const data = res.data[0];
+            const datahanthe = resThe.data[0];
             try {
               this.items[index].hoten = data.hoTen;
               this.items[index].ngaysinh = data.ngaySinh;
               this.items[index].gioitinh = data.gioiTinh;
               this.items[index].cccd = data.soCmnd;
               this.items[index].dienthoai = data.soDienThoai;
+
+              // CODE TÌM HẠN THẺ TỪ 05/06/2025
+              // gán hạn thẻ cũ lên form
+              this.hanthecu = datahanthe.denNgay;
+              const denNgayStr = datahanthe.denNgay; // vd: "10/10/2024"
+              // const denNgayStr = "15/03/2025";
+
+              // Hàm parse định dạng dd/mm/yyyy thành Date
+              const parseDate = (str) => {
+                const [day, month, year] = str.split("/").map(Number);
+                return new Date(year, month - 1, day);
+              };
+
+              // Hàm format Date về dd/mm/yyyy
+              const formatDate = (date) => {
+                const d = String(date.getDate()).padStart(2, "0");
+                const m = String(date.getMonth() + 1).padStart(2, "0");
+                const y = date.getFullYear();
+                return `${d}/${m}/${y}`;
+              };
+
+              const today = new Date();
+              const denNgay = parseDate(denNgayStr);
+              const bienLai = today;
+
+              // console.log("đến ngày: ", denNgay);
+              // console.log("biên lai: ", bienLai);
+
+              let tuNgay;
+
+              if (denNgay >= today) {
+                // Chưa hết hạn → ngày kế tiếp
+                const nextDay = new Date(denNgay);
+                nextDay.setDate(nextDay.getDate() + 1);
+                tuNgay = nextDay;
+              } else {
+                const daysDiff = (today - denNgay) / (1000 * 60 * 60 * 24);
+                if (daysDiff > 90) {
+                  // Hết hạn > 3 tháng → sau hôm nay 30 ngày
+                  const next30 = new Date();
+                  next30.setDate(next30.getDate() + 30);
+                  tuNgay = next30;
+                } else {
+                  // Hết hạn < 3 tháng → dùng ngày biên lai
+                  tuNgay = bienLai;
+                }
+              }
+
+              this.items[index].tungay = formatDate(tuNgay);
+              // console.log("🎯 Hạn thẻ từ (tungay):", this.items[index].tungay);
+
               this.items[index].matinh = data.maTinh;
               // đi tìm tên tỉnh
               const res_tinh = await this.$axios.get(
@@ -2978,8 +3034,10 @@ export default {
               //   this.items[i].ngaysinh = ngaysinhTranform;
               // }
 
-              const tungayTranform = this.convertDate(this.items[i].tungay);
-              this.items[i].tungay = tungayTranform;
+              // ĐỐI VỚI AN SINH 159 VÀ 68 THÌ TẠM SỬA CÁI NÀY TÝ
+              // const tungayTranform = this.convertDate(this.items[i].tungay);
+              // this.items[i].tungay = tungayTranform;
+
               this.items[i].denngay = this.calculateEndDate(
                 this.items[i].tungay,
                 this.items[i].maphuongthucdong
@@ -3035,7 +3093,7 @@ export default {
               let maCqBhxh = this.user.macqbhxh;
               let tenCqBhxh = this.user.tencqbhxh;
               let key = "0123"; // do bhxh vn cung cấp
-              let tuNgay = tungayTranform;
+              let tuNgay = this.items[i].tungay;
               let denNgay = this.calculateEndDate(tuNgay, soThang);
 
               // Loại bỏ dữ liệu không cần thiết bằng destructuring
